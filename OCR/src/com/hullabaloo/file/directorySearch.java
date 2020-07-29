@@ -17,10 +17,11 @@ import java.util.Scanner;
  * @author Vincent
  */
 public class directorySearch {
+
+    final ArrayList<String> allFiles = new ArrayList<String>();
+    final ArrayList<String> allFiles_SOURCE = new ArrayList<String>();
     
     public directorySearch(String directory){
-        final ArrayList<String> allFiles = new ArrayList<String>();
-        final ArrayList<String> allFiles_SOURCE = new ArrayList<String>();
         
         try {
             Path startPath = Paths.get(directory);
@@ -61,5 +62,12 @@ public class directorySearch {
         } catch (Exception ex){
                 //
         }
+    }
+
+    public ArrayList<String> getAllFilesSource() {
+        return allFiles_SOURCE;
+    }
+    public ArrayList<String> getAllFileNames() {
+        return allFiles;
     }
 }
