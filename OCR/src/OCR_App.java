@@ -1,9 +1,9 @@
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Dictionary;
 import java.util.Hashtable;
 import java.awt.event.ActionEvent;
+import java.awt.*;
 
 import javax.swing.DefaultListModel;
 import javax.swing.event.ListSelectionEvent;
@@ -11,11 +11,14 @@ import javax.swing.event.ListSelectionListener;
 import javax.swing.JFrame;
 import javax.swing.JList;
 import javax.swing.JMenuItem;
+import javax.swing.JPanel;
+import javax.swing.JProgressBar;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
+import javax.swing.SwingWorker;
 import javax.swing.UnsupportedLookAndFeelException;
 
 import com.hullabaloo.gui.AppWindow;
@@ -28,6 +31,11 @@ import net.sourceforge.tess4j.TesseractException;
 public class OCR_App {
 
     static boolean hasInterpretedDocs = false;
+    static final DefaultListModel<String> calcJobs = new DefaultListModel<>();
+    static final JList<String> calcJobsList = new JList<String>(calcJobs);
+    static Dictionary<String, String> interpretedDocs = new Hashtable<String, String>();
+    static final ArrayList<String> foundFiles_SOURCE = new ArrayList<String>();
+    static final ArrayList<String> foundFiles_NAME = new ArrayList<String>();
 
     public static void main(String[] args) throws ClassNotFoundException, InstantiationException,
             IllegalAccessException, UnsupportedLookAndFeelException {
@@ -35,7 +43,7 @@ public class OCR_App {
         /*---GUI INIT---*/
         JFrame window = new AppWindow("Document Analyzer", 800, 700);
 
-        // File buttons
+        /*---FILE BUTTONS---*/
         JMenuBar menu = new JMenuBar();
         JMenu menuFile = new JMenu("File");
         JMenuItem buttonChooseDirectory = new JMenuItem("Choose Directory");
@@ -44,10 +52,14 @@ public class OCR_App {
         menuFile.add(buttonChooseDirectory);
         menuFile.add(buttonInterpret);
 
-        // List of found files
+        /*---LIST FOUND FILES---*/
         final DefaultListModel<String> fileArchive = new DefaultListModel<>(); // Holds the locations of the files
         final JList<String> fileArchiveList = new JList<String>(fileArchive); // Displays model1
         final JScrollPane scroll = new JScrollPane(fileArchiveList, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+                JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+
+        /*---LIST JOBS FILES---*/
+        final JScrollPane jobScroll = new JScrollPane(calcJobsList, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
                 JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
 
         JTextArea fileContents = new JTextArea();
@@ -56,8 +68,18 @@ public class OCR_App {
         final JScrollPane contentScroll = new JScrollPane(fileContents, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
                 JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
 
+        JProgressBar jobProgress = new JProgressBar(0,10);
+        JPanel jobPanel = new JPanel();
+        jobPanel.setLayout(new GridLayout(2, 0)); 
+        jobPanel.add(BorderLayout.NORTH, jobScroll);
+        jobPanel.add(BorderLayout.SOUTH,jobProgress);
+
+        JSplitPane contentJobPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, contentScroll, jobPanel);
+        contentJobPane.setDividerLocation(500);
+
         // Display the JList with the name and the content displayed in the JTextArea
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, scroll, contentScroll);
+        
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, scroll, contentJobPane);
         splitPane.setOneTouchExpandable(true);
         splitPane.setDividerLocation(200);
 
@@ -71,11 +93,6 @@ public class OCR_App {
         window.repaint();
 
         /*---END OF GUI INIT---*/
-
-        final ArrayList<String> foundFiles_SOURCE = new ArrayList<String>();
-        final ArrayList<String> foundFiles_NAME = new ArrayList<String>();
-
-        Dictionary<String, String> interpretedDocs = new Hashtable<String, String>();
 
         Tesseract tesseract = new Tesseract();
 
@@ -93,20 +110,38 @@ public class OCR_App {
         });
 
         buttonInterpret.addActionListener((ActionEvent e) -> {
-            try {
-                String programPath = System.getProperty("user.dir") + "/tessdata";
-                programPath = programPath.replace("\\", "/");
-                tesseract.setDatapath(programPath);
+            String programPath = System.getProperty("user.dir") + "/tessdata";
+            programPath = programPath.replace("\\", "/");
 
-                for (int fileIndex = 0; fileIndex < foundFiles_SOURCE.size(); fileIndex++) {
-                    String text = tesseract.doOCR(new File(foundFiles_SOURCE.get(fileIndex)));
-
-                    interpretedDocs.put(foundFiles_NAME.get(fileIndex), text);
+            tesseract.setDatapath(programPath);
+            
+            SwingWorker worker = new SwingWorker<String, Void>() {
+                @Override
+                public String doInBackground() {
+                    jobProgress.setMaximum(foundFiles_SOURCE.size());
+                    for (int fileIndex = 0; fileIndex < foundFiles_SOURCE.size(); fileIndex++) {
+                        calcJobs.addElement("Queued: " + foundFiles_NAME.get(fileIndex));
+                        calcJobs.set(fileIndex, "Running: " + foundFiles_NAME.get(fileIndex));
+                        String text = "";
+                        try {
+                            text = tesseract.doOCR(new File(foundFiles_SOURCE.get(fileIndex)));
+                        } catch (TesseractException e) {
+                            e.printStackTrace();
+                        }
+                        interpretedDocs.put(foundFiles_NAME.get(fileIndex), text);
+                        calcJobs.set(fileIndex, "Completed: " + foundFiles_NAME.get(fileIndex));
+                        jobProgress.setValue(fileIndex+1);
+                    }
+                    return "";
                 }
-                hasInterpretedDocs = true;
-            } catch (TesseractException TE) { 
-                TE.printStackTrace(); 
-            }
+            
+                @Override
+                public void done() {
+                    System.out.println("DONE");
+                }
+            };
+            worker.execute();
+            hasInterpretedDocs = true;
         });
 
         fileArchiveList.addListSelectionListener(new ListSelectionListener() {
