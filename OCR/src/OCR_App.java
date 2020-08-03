@@ -35,19 +35,18 @@ import net.sourceforge.tess4j.TesseractException;
 
 /**
  *
- * @author vince
+ * @author Vincent Aliquo
+ * http://www.aliquodigitalportfolio.com/
+ * https://github.com/hullabaloo-vincent
+ * 
  */
 public class OCR_App extends JFrame {
 
-    /**
-     *
-     */
     private static final long serialVersionUID = 1L;
+
     static boolean hasInterpretedDocs = false;
     static final DefaultListModel<String> calcJobs = new DefaultListModel<>();
-
     static final DefaultListModel<String> fileArchive = new DefaultListModel<>();
-
     static Dictionary<String, String> interpretedDocs = new Hashtable<String, String>();
     static final ArrayList<String> foundFiles_SOURCE = new ArrayList<String>();
     static final ArrayList<String> foundFiles_NAME = new ArrayList<String>();
@@ -74,11 +73,15 @@ public class OCR_App extends JFrame {
         buttonInterpret = new JButton();
         clarifyImage = new JCheckBox();
 
+        /*---SET UP WINDOW PARAMETERS---*/
+
         setTitle("Document Analyzer");
         setMinimumSize(new Dimension(700, 450));
         setLocationRelativeTo(null);
         setResizable(false);
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+
+        /*----------------------------- */
 
         scrollFileList.setViewportView(fileArchiveList);
         scrollFileList.setPreferredSize(new Dimension(scrollFileList.getPreferredSize().height, 400));
@@ -135,7 +138,6 @@ public class OCR_App extends JFrame {
 
         buttonInterpret.setText("Analyze Documents");
         buttonInterpret.setEnabled(false);
-
         buttonInterpret.addActionListener((ActionEvent e) -> {
             tabbedContent.setSelectedIndex(1); //set to job content panel
             buttonInterpret.setEnabled(false);
