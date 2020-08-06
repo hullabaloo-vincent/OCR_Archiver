@@ -1,9 +1,14 @@
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Dictionary;
 import java.util.Hashtable;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
+
+import javax.swing.JFrame;
+import javax.swing.WindowConstants;
 
 import javax.swing.DefaultListModel;
 import javax.swing.GroupLayout;
@@ -11,7 +16,6 @@ import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
-import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
@@ -24,10 +28,10 @@ import javax.swing.LayoutStyle;
 import javax.swing.SwingWorker;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
-import javax.swing.WindowConstants;
 
 import com.hullabaloo.file.createFileChooser;
 import com.hullabaloo.file.directorySearch;
+import com.hullabaloo.file.loadLibrary;
 
 import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.tess4j.TesseractException;
@@ -49,14 +53,13 @@ public class OCR_App extends JFrame {
     static final DefaultListModel<String> fileArchive = new DefaultListModel<>();
     static Dictionary<String, String> interpretedDocs = new Hashtable<String, String>();
     static final ArrayList<String> foundFiles_SOURCE = new ArrayList<String>();
-    static final ArrayList<String> foundFiles_NAME = new ArrayList<String>();
+    static ArrayList<String> foundFiles_NAME = new ArrayList<String>();
 
     public OCR_App() {
         initComponents();
     }
 
     private void initComponents() {
-
         scrollFileList = new JScrollPane();
         calcJobsList = new JList<String>(calcJobs);
         fileArchiveList = new JList<String>(fileArchive);
@@ -134,6 +137,7 @@ public class OCR_App extends JFrame {
                 foundFiles_NAME.add(ds.getAllFileNames().get(fileIndex));
             }
             buttonInterpret.setEnabled(true);
+            saveLibrary();
         });
 
         buttonInterpret.setText("Analyze Documents");
@@ -145,11 +149,10 @@ public class OCR_App extends JFrame {
             programPath = programPath.replace("\\", "/");
 
             tesseract.setDatapath(programPath);
-
             SwingWorker<String, Void> worker = new SwingWorker<String, Void>() {
                 @Override
                 public String doInBackground() {
-                    jobProgress.setMaximum(foundFiles_SOURCE.size());
+                    jobProgress.setMaximum(foundFiles_SOURCE.size()); 
                     for (int fileIndex = 0; fileIndex < foundFiles_SOURCE.size(); fileIndex++) {
                         calcJobs.addElement("Queued: " + foundFiles_NAME.get(fileIndex));
                         calcJobs.set(fileIndex, "Running: " + foundFiles_NAME.get(fileIndex));
@@ -237,8 +240,25 @@ public class OCR_App extends JFrame {
         pack();
     }
 
+    public void saveLibrary(){
+        try{
+            System.out.println("Saving Library");
+            String programPath = System.getProperty("user.dir") + "/libdata";
+            programPath = programPath.replace("\\", "/");
+            FileOutputStream fos_names = new FileOutputStream(programPath+"/names.libdata");
+            ObjectOutputStream oos_names = new ObjectOutputStream(fos_names);
+            oos_names.writeObject(foundFiles_NAME);
+            oos_names.close();
+        } catch(Exception ex){
+            System.out.println(ex);
+        }
+    }
+
     private void clarifyImageActionPerformed(java.awt.event.ActionEvent evt) {
-        // put image stuff here
+        ArrayList<String> temp = new loadLibrary().loadMe("names.libdata");
+        for (int i = 0; i < temp.size(); i++){
+            fileArchive.addElement(temp.get(i));
+        }
     }
 
     public static void main(String args[]) {
