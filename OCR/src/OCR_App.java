@@ -137,7 +137,8 @@ public class OCR_App extends JFrame {
                 foundFiles_NAME.add(ds.getAllFileNames().get(fileIndex));
             }
             buttonInterpret.setEnabled(true);
-            saveLibrary();
+            saveLibrary("names");
+            saveLibrary("sources");
         });
 
         buttonInterpret.setText("Analyze Documents");
@@ -172,6 +173,7 @@ public class OCR_App extends JFrame {
                 @Override
                 public void done() {
                     System.out.println("DONE");
+                    saveLibrary("content");
                 }
             };
             worker.execute();
@@ -240,15 +242,31 @@ public class OCR_App extends JFrame {
         pack();
     }
 
-    public void saveLibrary(){
+    public void saveLibrary(String type){
         try{
-            System.out.println("Saving Library");
             String programPath = System.getProperty("user.dir") + "/libdata";
             programPath = programPath.replace("\\", "/");
-            FileOutputStream fos_names = new FileOutputStream(programPath+"/names.libdata");
-            ObjectOutputStream oos_names = new ObjectOutputStream(fos_names);
-            oos_names.writeObject(foundFiles_NAME);
-            oos_names.close();
+            //NAMES
+            if (type == "names"){
+                FileOutputStream fos_names = new FileOutputStream(programPath+"/names.libdata");
+                ObjectOutputStream oos_names = new ObjectOutputStream(fos_names);
+                oos_names.writeObject(foundFiles_NAME);
+                oos_names.close();
+            }
+            //SOURCES
+            if (type == "sources"){
+                FileOutputStream fos_sources = new FileOutputStream(programPath+"/source.libdata");
+                ObjectOutputStream oos_sources = new ObjectOutputStream(fos_sources);
+                oos_sources.writeObject(foundFiles_SOURCE);
+                oos_sources.close();
+            }
+            //CONTENT
+            if (type == "content"){
+                FileOutputStream fos_content = new FileOutputStream(programPath+"/content.libdata");
+                ObjectOutputStream oos_content = new ObjectOutputStream(fos_content);
+                oos_content.writeObject(interpretedDocs);
+                oos_content.close();
+            }
         } catch(Exception ex){
             System.out.println(ex);
         }
