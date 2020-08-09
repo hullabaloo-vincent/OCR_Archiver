@@ -42,9 +42,7 @@ public class directorySearch {
                         if (file.toString().endsWith(value)) {
                             String whole = file.toString().replace("\\", "/");
                             String name = file.getFileName().toString();
-                            if (allFiles.contains(name)) {
-
-                            } else {
+                            if (!allFiles.contains(name)) {
                                 allFiles.add(name);
                                 allFiles_SOURCE.add(whole);
                             }

@@ -18,6 +18,9 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.JLabel;
 import javax.swing.JList;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
@@ -60,6 +63,11 @@ public class OCR_App extends JFrame {
     }
 
     private void initComponents() {
+        menubar = new JMenuBar();
+        menu = new JMenu("File");
+        loadLibrary = new JMenuItem("Load Library");
+        clearLibrary = new JMenuItem("Clear Library");
+        langaugeModels = new JMenuItem("Choose Language Models");
         scrollFileList = new JScrollPane();
         calcJobsList = new JList<String>(calcJobs);
         fileArchiveList = new JList<String>(fileArchive);
@@ -77,7 +85,7 @@ public class OCR_App extends JFrame {
         clarifyImage = new JCheckBox();
 
         /*---SET UP WINDOW PARAMETERS---*/
-
+        setJMenuBar(menubar);
         setTitle("Document Analyzer");
         setMinimumSize(new Dimension(700, 450));
         setLocationRelativeTo(null);
@@ -85,6 +93,12 @@ public class OCR_App extends JFrame {
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
         /*----------------------------- */
+
+        menubar.add(menu);
+        menu.add(loadLibrary);
+        menu.add(clearLibrary);
+        menu.addSeparator();
+        menu.add(langaugeModels);
 
         scrollFileList.setViewportView(fileArchiveList);
         scrollFileList.setPreferredSize(new Dimension(scrollFileList.getPreferredSize().height, 400));
@@ -191,6 +205,13 @@ public class OCR_App extends JFrame {
             }
         });
 
+        loadLibrary.addActionListener((ActionEvent e) -> {
+            ArrayList<String> temp = new loadLibrary().loadMe("names.libdata");
+            for (int i = 0; i < temp.size(); i++){
+                fileArchive.addElement(temp.get(i));
+            }
+        });
+
         clarifyImage.setText("Clarify Images");
         clarifyImage.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -273,10 +294,7 @@ public class OCR_App extends JFrame {
     }
 
     private void clarifyImageActionPerformed(java.awt.event.ActionEvent evt) {
-        ArrayList<String> temp = new loadLibrary().loadMe("names.libdata");
-        for (int i = 0; i < temp.size(); i++){
-            fileArchive.addElement(temp.get(i));
-        }
+        
     }
 
     public static void main(String args[]) {
@@ -305,6 +323,11 @@ public class OCR_App extends JFrame {
         });
     }
 
+    private JMenuBar menubar;
+    private JMenu menu;
+    private JMenuItem loadLibrary;
+    private JMenuItem clearLibrary;
+    private JMenuItem langaugeModels;
     private JButton chooseDirectory;
     private JCheckBox clarifyImage;
     private JLabel labelLibrarySection;

@@ -24,7 +24,7 @@ public class loadLibrary implements Serializable{
         name = (ArrayList<String>) objectInputStream.readObject();
         objectInputStream.close();
         }catch(Exception ex){
-
+            System.out.println("Error: " + ex);
         }
         return name;
     }
