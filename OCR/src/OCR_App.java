@@ -263,6 +263,10 @@ public class OCR_App extends JFrame {
         pack();
     }
 
+    
+    /** 
+     * @param type
+     */
     public void saveLibrary(String type){
         try{
             String programPath = System.getProperty("user.dir") + "/libdata";
@@ -293,10 +297,18 @@ public class OCR_App extends JFrame {
         }
     }
 
+    
+    /** 
+     * @param evt
+     */
     private void clarifyImageActionPerformed(java.awt.event.ActionEvent evt) {
         
     }
 
+    
+    /** 
+     * @param args[]
+     */
     public static void main(String args[]) {
         //UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         try {

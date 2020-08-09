@@ -62,9 +62,17 @@ public class directorySearch {
         }
     }
 
+    
+    /** 
+     * @return ArrayList<String>
+     */
     public ArrayList<String> getAllFilesSource() {
         return allFiles_SOURCE;
     }
+    
+    /** 
+     * @return ArrayList<String>
+     */
     public ArrayList<String> getAllFileNames() {
         return allFiles;
     }

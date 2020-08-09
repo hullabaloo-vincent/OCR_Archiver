@@ -14,6 +14,11 @@ public class loadLibrary implements Serializable{
 
     public loadLibrary() {}
 
+    
+    /** 
+     * @param data
+     * @return ArrayList<String>
+     */
     public ArrayList<String> loadMe(String data){
         try{
         String programPath = System.getProperty("user.dir") + "/libdata";

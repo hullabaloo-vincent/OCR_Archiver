@@ -34,6 +34,10 @@ public class createFileChooser {
         }
         selection = fc.getSelectedFile().getAbsolutePath();
     }
+    
+    /** 
+     * @return String
+     */
     public String getSelection() {
         return selection;
     }
