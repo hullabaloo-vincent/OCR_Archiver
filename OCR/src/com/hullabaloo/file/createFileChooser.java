@@ -3,14 +3,14 @@ package com.hullabaloo.file;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 
-public class createFileChooser {
+public class CreateFileChooser {
 
     private JButton open;
     private String fcName;
     private String fcSelection;
     private String selection;
 
-    public createFileChooser(String chooserName, String fileSelection){
+    public CreateFileChooser(String chooserName, String fileSelection){
         fcName = chooserName;
         fcSelection = fileSelection;
         JFileChooser fc = new JFileChooser();
@@ -34,8 +34,7 @@ public class createFileChooser {
         }
         selection = fc.getSelectedFile().getAbsolutePath();
     }
-    
-    /** 
+    /**
      * @return String
      */
     public String getSelection() {
