@@ -20,24 +20,30 @@ public class directorySearch {
 
     final ArrayList<String> allFiles = new ArrayList<String>();
     final ArrayList<String> allFiles_SOURCE = new ArrayList<String>();
-    
+
     public directorySearch(String directory){
-        
+
         try {
             Path startPath = Paths.get(directory);
                 Files.walkFileTree(startPath, new SimpleFileVisitor<Path>() {
                 @Override
-                public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
+                public FileVisitResult preVisitDirectory(final Path dir,
+                            final BasicFileAttributes attrs) {
                     return FileVisitResult.CONTINUE;
                 }
 
                 @Override
-                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws FileNotFoundException {
-                    String readF = new Scanner(new File("filter.fl")).useDelimiter("\\A").next();
+                public FileVisitResult visitFile(final Path file,
+                final BasicFileAttributes attrs)
+                            throws FileNotFoundException {
+                    String readF = new Scanner(
+                        new File("filter.fl")).useDelimiter("\\A").next();
                     String splitHere = "[,]";
                     int l = 0;
-                    String[] tokens = readF.split(splitHere); //Split up contents of filter.fl every ',' into a string array
-                    while (l != tokens.length) { //Tests each file with the filters found in the string array (tokens)
+//Split up contents of filter.fl every ',' into a string array
+                    String[] tokens = readF.split(splitHere);
+//Tests each file with the filters found in the string array (tokens)
+                    while (l != tokens.length) {
                         String value = tokens[l];
                         if (file.toString().endsWith(value)) {
                             String whole = file.toString().replace("\\", "/");
@@ -53,24 +59,24 @@ public class directorySearch {
                 }
 
                 @Override
-                public FileVisitResult visitFileFailed(Path file, IOException e) {
+                public FileVisitResult visitFileFailed(final Path file,
+                final IOException e) {
                     return FileVisitResult.CONTINUE;
                 }
             });
-        } catch (Exception ex){
-                //
+        } catch (Exception ex) {
+                System.out.println("Error: " + ex);
         }
     }
 
-    
-    /** 
+    /**
      * @return ArrayList<String>
      */
     public ArrayList<String> getAllFilesSource() {
         return allFiles_SOURCE;
     }
-    
-    /** 
+
+    /**
      * @return ArrayList<String>
      */
     public ArrayList<String> getAllFileNames() {

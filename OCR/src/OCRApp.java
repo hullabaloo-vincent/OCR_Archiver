@@ -101,7 +101,8 @@ public class OCRApp extends JFrame {
         menu.add(langaugeModels);
 
         scrollFileList.setViewportView(fileArchiveList);
-        scrollFileList.setPreferredSize(new Dimension(scrollFileList.getPreferredSize().height, 400));
+        scrollFileList.setPreferredSize(new Dimension(
+            scrollFileList.getPreferredSize().height, 400));
         fileContents.setColumns(20);
         fileContents.setRows(5);
         fileContents.setEditable(false);
