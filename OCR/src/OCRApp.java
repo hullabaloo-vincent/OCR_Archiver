@@ -6,10 +6,15 @@ import java.util.Dictionary;
 import java.util.Hashtable;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionListener;
+import java.awt.Point;
 
 import javax.swing.JFrame;
 import javax.swing.WindowConstants;
-
+import javax.swing.AbstractAction;
+import javax.swing.Action;
 import javax.swing.DefaultListModel;
 import javax.swing.GroupLayout;
 import javax.swing.JButton;
@@ -54,9 +59,11 @@ public class OCRApp extends JFrame {
     static boolean hasInterpretedDocs = false;
     static final DefaultListModel<String> calcJobs = new DefaultListModel<>();
     static final DefaultListModel<String> fileArchive = new DefaultListModel<>();
+    static final DefaultListModel<String> searchResults = new DefaultListModel<>();
     static Dictionary<String, String> interpretedDocs = new Hashtable<String, String>();
     static final ArrayList<String> foundFiles_SOURCE = new ArrayList<String>();
     static ArrayList<String> foundFiles_NAME = new ArrayList<String>();
+    static Point compCoords;
 
     public OCRApp() {
         initComponents();
@@ -68,9 +75,12 @@ public class OCRApp extends JFrame {
         loadLibrary = new JMenuItem("Load Library");
         clearLibrary = new JMenuItem("Clear Library");
         langaugeModels = new JMenuItem("Choose Language Models");
+        exitProgram = new JMenuItem("Exit");
+        minimizeProgram = new JMenuItem("Minimize");
         scrollFileList = new JScrollPane();
         calcJobsList = new JList<String>(calcJobs);
         fileArchiveList = new JList<String>(fileArchive);
+        searchResultsList = new JList<String>(searchResults);
         tabbedContent = new JTabbedPane();
         jScrollPane2 = new JScrollPane();
         fileContents = new JTextArea();
@@ -88,6 +98,7 @@ public class OCRApp extends JFrame {
         setJMenuBar(menubar);
         setTitle("Document Analyzer");
         setMinimumSize(new Dimension(700, 450));
+        setUndecorated(true);
         setLocationRelativeTo(null);
         setResizable(false);
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
@@ -99,6 +110,9 @@ public class OCRApp extends JFrame {
         menu.add(clearLibrary);
         menu.addSeparator();
         menu.add(langaugeModels);
+        menu.addSeparator();
+        menu.add(minimizeProgram);
+        menu.add(exitProgram);
 
         scrollFileList.setViewportView(fileArchiveList);
         scrollFileList.setPreferredSize(new Dimension(
@@ -137,6 +151,54 @@ public class OCRApp extends JFrame {
 
         labelSearch.setFont(new java.awt.Font("Tahoma", 1, 10));
         labelSearch.setText("Search");
+
+        tabbedContent.addTab("Search Results", searchResultsList);
+
+        Action action = new AbstractAction(){
+            /**
+            *
+            */
+            private static final long serialVersionUID = 1L;
+            @Override
+            public void actionPerformed(ActionEvent e){
+                System.out.println("some action");
+            }
+        };
+        searchFiles.addActionListener( action );
+        searchFiles.setEditable(false);
+        searchFiles.setToolTipText("Press enter after you are finished typing");
+        
+        /*
+        * Window moving
+        */
+        compCoords = null;
+        menubar.addMouseListener(new MouseListener() {
+            public void mouseReleased(MouseEvent e) {
+                compCoords = null;
+            }
+
+            public void mousePressed(MouseEvent e) {
+                compCoords = e.getPoint();
+            }
+
+            public void mouseExited(MouseEvent e) {
+            }
+
+            public void mouseEntered(MouseEvent e) {
+            }
+
+            public void mouseClicked(MouseEvent e) {
+            }
+        });
+        menubar.addMouseMotionListener(new MouseMotionListener() {
+            public void mouseMoved(MouseEvent e) {
+            }
+
+            public void mouseDragged(MouseEvent e) {
+                Point currCoords = e.getLocationOnScreen();
+                setLocation(currCoords.x - compCoords.x, currCoords.y - compCoords.y);
+            }
+        });
 
         Tesseract tesseract = new Tesseract();
 
@@ -189,6 +251,7 @@ public class OCRApp extends JFrame {
                 public void done() {
                     System.out.println("DONE");
                     saveLibrary("content");
+                    searchFiles.setEditable(true);
                 }
             };
             worker.execute();
@@ -208,10 +271,19 @@ public class OCRApp extends JFrame {
         });
 
         loadLibrary.addActionListener((ActionEvent e) -> {
-            ArrayList<String> temp = new LoadLibrary().loadMe("names.libdata");
-            for (int i = 0; i < temp.size(); i++){
-                fileArchive.addElement(temp.get(i));
+            ArrayList<String> loadName = new LoadLibrary().loadMe("names.libdata");
+            ArrayList<String> loadSource = new LoadLibrary().loadMe("source.libdata");
+            Dictionary<String, String> loadContent = new LoadLibrary().loadContent("content.libdata");
+
+            for (int i = 0; i < loadName.size(); i++){
+                fileArchive.addElement(loadName.get(i));
+                foundFiles_NAME.add(i, loadName.get(i));
+                foundFiles_SOURCE.add(i, loadSource.get(i));
             }
+            for (int i = 0; i < loadContent.size(); i++){
+                interpretedDocs.put(loadName.get(i), loadContent.get(loadName.get(i)));
+            }
+            searchFiles.setEditable(true);
         });
 
         clarifyImage.setText("Clarify Images");
@@ -219,6 +291,14 @@ public class OCRApp extends JFrame {
             public void actionPerformed(final java.awt.event.ActionEvent evt) {
                 clarifyImageActionPerformed(evt);
             }
+        });
+
+        exitProgram.addActionListener((ActionEvent e) -> {
+            System.exit(0);
+        });
+
+        minimizeProgram.addActionListener((ActionEvent e) -> {
+            setState(JFrame.ICONIFIED);
         });
 
         GroupLayout layout = new GroupLayout(getContentPane());
@@ -367,12 +447,15 @@ public class OCRApp extends JFrame {
     private JMenuItem loadLibrary;
     private JMenuItem clearLibrary;
     private JMenuItem langaugeModels;
+    private JMenuItem exitProgram;
+    private JMenuItem minimizeProgram;
     private JButton chooseDirectory;
     private JCheckBox clarifyImage;
     private JLabel labelLibrarySection;
     private JLabel labelSearch;
     private JList<String> calcJobsList;
     private JList<String> fileArchiveList;
+    private JList<String> searchResultsList;
     private JPanel jobPanel;
     private JProgressBar jobProgress;
     private JScrollPane scrollFileList;
