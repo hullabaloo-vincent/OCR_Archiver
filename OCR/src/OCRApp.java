@@ -1,5 +1,6 @@
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Dictionary;
@@ -8,8 +9,10 @@ import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.awt.event.MouseAdapter;
 import java.awt.event.MouseMotionListener;
 import java.awt.Point;
+import java.awt.Desktop;
 
 import javax.swing.JFrame;
 import javax.swing.WindowConstants;
@@ -17,6 +20,7 @@ import javax.swing.AbstractAction;
 import javax.swing.Action;
 import javax.swing.DefaultListModel;
 import javax.swing.GroupLayout;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.event.ListSelectionEvent;
@@ -27,12 +31,14 @@ import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.LayoutStyle;
+import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
@@ -40,6 +46,7 @@ import javax.swing.UnsupportedLookAndFeelException;
 import com.hullabaloo.file.CreateFileChooser;
 import com.hullabaloo.file.directorySearch;
 import com.hullabaloo.file.LoadLibrary;
+import com.hullabaloo.file.OpenFileLocation;
 
 import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.tess4j.TesseractException;
@@ -125,22 +132,15 @@ public class OCRApp extends JFrame {
         tabbedContent.addTab("File Content", jScrollPane2);
         jScrollPane3.setViewportView(calcJobsList);
 
-        GroupLayout jobPanelLayout = new GroupLayout(jobPanel);
+        final GroupLayout jobPanelLayout = new GroupLayout(jobPanel);
         jobPanel.setLayout(jobPanelLayout);
-        jobPanelLayout.setHorizontalGroup(
-            jobPanelLayout.createParallelGroup(GroupLayout.Alignment.LEADING)
-            .addComponent(jScrollPane3)
-            .addComponent(jobProgress,
-                GroupLayout.DEFAULT_SIZE, 598, Short.MAX_VALUE)
-        );
-        jobPanelLayout.setVerticalGroup(
-            jobPanelLayout.createParallelGroup(GroupLayout.Alignment.LEADING)
-            .addGroup(jobPanelLayout.createSequentialGroup()
-                .addComponent(jScrollPane3,
-                    GroupLayout.DEFAULT_SIZE, 371, Short.MAX_VALUE)
-                .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jobProgress, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE))
-        );
+        jobPanelLayout.setHorizontalGroup(jobPanelLayout.createParallelGroup(GroupLayout.Alignment.LEADING)
+                .addComponent(jScrollPane3).addComponent(jobProgress, GroupLayout.DEFAULT_SIZE, 598, Short.MAX_VALUE));
+        jobPanelLayout.setVerticalGroup(jobPanelLayout.createParallelGroup(GroupLayout.Alignment.LEADING)
+                .addGroup(jobPanelLayout.createSequentialGroup()
+                        .addComponent(jScrollPane3, GroupLayout.DEFAULT_SIZE, 371, Short.MAX_VALUE)
+                        .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED).addComponent(jobProgress,
+                                GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)));
 
         tabbedContent.addTab("Job List", jobPanel);
 
@@ -154,59 +154,60 @@ public class OCRApp extends JFrame {
 
         tabbedContent.addTab("Search Results", searchResultsList);
 
-        Action action = new AbstractAction(){
+        final Action action = new AbstractAction() {
             /**
             *
             */
             private static final long serialVersionUID = 1L;
+
             @Override
-            public void actionPerformed(ActionEvent e){
+            public void actionPerformed(final ActionEvent e) {
                 System.out.println("some action");
             }
         };
-        searchFiles.addActionListener( action );
+        searchFiles.addActionListener(action);
         searchFiles.setEditable(false);
         searchFiles.setToolTipText("Press enter after you are finished typing");
-        
+
         /*
-        * Window moving
-        */
+         * Window moving
+         */
         compCoords = null;
         menubar.addMouseListener(new MouseListener() {
-            public void mouseReleased(MouseEvent e) {
+            public void mouseReleased(final MouseEvent e) {
                 compCoords = null;
             }
 
-            public void mousePressed(MouseEvent e) {
+            public void mousePressed(final MouseEvent e) {
                 compCoords = e.getPoint();
             }
 
-            public void mouseExited(MouseEvent e) {
+            public void mouseExited(final MouseEvent e) {
             }
 
-            public void mouseEntered(MouseEvent e) {
+            public void mouseEntered(final MouseEvent e) {
             }
 
-            public void mouseClicked(MouseEvent e) {
+            public void mouseClicked(final MouseEvent e) {
             }
         });
         menubar.addMouseMotionListener(new MouseMotionListener() {
-            public void mouseMoved(MouseEvent e) {
+            public void mouseMoved(final MouseEvent e) {
             }
 
-            public void mouseDragged(MouseEvent e) {
-                Point currCoords = e.getLocationOnScreen();
+            public void mouseDragged(final MouseEvent e) {
+                final Point currCoords = e.getLocationOnScreen();
                 setLocation(currCoords.x - compCoords.x, currCoords.y - compCoords.y);
             }
         });
 
-        Tesseract tesseract = new Tesseract();
+        final Tesseract tesseract = new Tesseract();
 
         chooseDirectory.setText("Load Library");
-        chooseDirectory.addActionListener((ActionEvent e) -> {
-            CreateFileChooser fileChooser = new CreateFileChooser("Select a starting location",
+        chooseDirectory.addActionListener((final ActionEvent e) -> {
+            final CreateFileChooser fileChooser = new CreateFileChooser("Select a starting location",
                     "FILES_AND_DIRECTORIES");
-            directorySearch ds = new directorySearch(fileChooser.getSelection());
+            final directorySearch ds = new directorySearch(fileChooser.getSelection());
 
             for (int fileIndex = 0; fileIndex < ds.getAllFileNames().size() - 1; fileIndex++) {
                 fileArchive.addElement(ds.getAllFileNames().get(fileIndex));
@@ -220,25 +221,27 @@ public class OCRApp extends JFrame {
 
         buttonInterpret.setText("Analyze Documents");
         buttonInterpret.setEnabled(false);
-        buttonInterpret.addActionListener((ActionEvent e) -> {
-            tabbedContent.setSelectedIndex(1); //set to job content panel
+        buttonInterpret.addActionListener((final ActionEvent e) -> {
+            tabbedContent.setSelectedIndex(1); // set to job content panel
             buttonInterpret.setEnabled(false);
             String programPath = System.getProperty("user.dir") + "/tessdata";
             programPath = programPath.replace("\\", "/");
 
             tesseract.setDatapath(programPath);
-            SwingWorker<String, Void> worker = new SwingWorker<String, Void>() {
+            final SwingWorker<String, Void> worker = new SwingWorker<String, Void>() {
                 @Override
                 public String doInBackground() {
-                    jobProgress.setMaximum(foundFiles_SOURCE.size()); 
+                    jobProgress.setMaximum(foundFiles_SOURCE.size());
                     for (int fileIndex = 0; fileIndex < foundFiles_SOURCE.size(); fileIndex++) {
                         calcJobs.addElement("Queued: " + foundFiles_NAME.get(fileIndex));
                         calcJobs.set(fileIndex, "Running: " + foundFiles_NAME.get(fileIndex));
                         String text = "";
                         try {
                             text = tesseract.doOCR(new File(foundFiles_SOURCE.get(fileIndex)));
-                        } catch (TesseractException e) {
+                        } catch (final TesseractException e) {
                             e.printStackTrace();
+                        } catch (final Exception ee) {
+                            ee.printStackTrace();
                         }
                         interpretedDocs.put(foundFiles_NAME.get(fileIndex), text);
                         calcJobs.set(fileIndex, "Completed: " + foundFiles_NAME.get(fileIndex));
@@ -263,27 +266,27 @@ public class OCRApp extends JFrame {
             public void valueChanged(final ListSelectionEvent arg0) {
                 if (!arg0.getValueIsAdjusting()) {
                     if (hasInterpretedDocs) {
-                        fileContents.setText(interpretedDocs.get(
-                            fileArchiveList.getSelectedValue().toString()));
+                        fileContents.setText(interpretedDocs.get(fileArchiveList.getSelectedValue().toString()));
                     }
                 }
             }
         });
 
-        loadLibrary.addActionListener((ActionEvent e) -> {
-            ArrayList<String> loadName = new LoadLibrary().loadMe("names.libdata");
-            ArrayList<String> loadSource = new LoadLibrary().loadMe("source.libdata");
-            Dictionary<String, String> loadContent = new LoadLibrary().loadContent("content.libdata");
+        loadLibrary.addActionListener((final ActionEvent e) -> {
+            final ArrayList<String> loadName = new LoadLibrary().loadMe("names.libdata");
+            final ArrayList<String> loadSource = new LoadLibrary().loadMe("source.libdata");
+            final Dictionary<String, String> loadContent = new LoadLibrary().loadContent("content.libdata");
 
-            for (int i = 0; i < loadName.size(); i++){
+            for (int i = 0; i < loadName.size(); i++) {
                 fileArchive.addElement(loadName.get(i));
                 foundFiles_NAME.add(i, loadName.get(i));
                 foundFiles_SOURCE.add(i, loadSource.get(i));
             }
-            for (int i = 0; i < loadContent.size(); i++){
+            for (int i = 0; i < loadContent.size(); i++) {
                 interpretedDocs.put(loadName.get(i), loadContent.get(loadName.get(i)));
             }
             searchFiles.setEditable(true);
+            buttonInterpret.setEnabled(true);
         });
 
         clarifyImage.setText("Clarify Images");
@@ -293,144 +296,127 @@ public class OCRApp extends JFrame {
             }
         });
 
-        exitProgram.addActionListener((ActionEvent e) -> {
+        exitProgram.addActionListener((final ActionEvent e) -> {
             System.exit(0);
         });
 
-        minimizeProgram.addActionListener((ActionEvent e) -> {
+        minimizeProgram.addActionListener((final ActionEvent e) -> {
             setState(JFrame.ICONIFIED);
         });
 
-        GroupLayout layout = new GroupLayout(getContentPane());
+        fileArchiveList.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseReleased(final MouseEvent e) {
+                if (SwingUtilities.isRightMouseButton(e)) {
+                    final String selection = fileArchiveList.getSelectedValue().toString();
+                    final JPopupMenu popup = new JPopupMenu();
+                    JMenuItem openFileLocation = null;
+                    if (Desktop.isDesktopSupported()) {
+                        try {
+                            openFileLocation = new OpenFileLocation(foundFiles_SOURCE.get(foundFiles_NAME.indexOf(selection)));
+                            final ImageIcon openFL_icon = new ImageIcon("Img/open-sm.png");
+                            openFileLocation.setIcon(openFL_icon);
+                        } catch (final IOException ex) {
+                            System.out.println("IO Exception: " + ex);
+                        }
+                    }
+                    popup.add(openFileLocation);
+                    popup.show(e.getComponent(), e.getX(), e.getY());
+                }
+            }
+        });
+
+        final GroupLayout layout = new GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
-        layout.setHorizontalGroup(
-            layout.createParallelGroup(GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addGap(10, 10, 10)
-                .addGroup(layout.createParallelGroup(
-                    GroupLayout.Alignment.LEADING, false)
-                    .addComponent(scrollFileList)
-                    .addComponent(labelLibrarySection,
-                    GroupLayout.DEFAULT_SIZE, 300, Short.MAX_VALUE))
+        layout.setHorizontalGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING).addGroup(layout
+                .createSequentialGroup().addGap(10, 10, 10)
+                .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING, false).addComponent(scrollFileList)
+                        .addComponent(labelLibrarySection, GroupLayout.DEFAULT_SIZE, 300, Short.MAX_VALUE))
                 .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(layout.createParallelGroup(
-                    GroupLayout.Alignment.LEADING)
-                    .addGroup(layout.createSequentialGroup()
-                        .addComponent(chooseDirectory)
-                        .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(buttonInterpret)
-                        .addPreferredGap(
-                            LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(clarifyImage,
-                            GroupLayout.DEFAULT_SIZE, 110, Short.MAX_VALUE)
-                        .addGap(42, 42, 42)
-                        .addComponent(labelSearch)
-                        .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(searchFiles,
-                            GroupLayout.PREFERRED_SIZE, 187,
-                            GroupLayout.PREFERRED_SIZE))
-                    .addComponent(tabbedContent,
-                        GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE))
-                .addContainerGap())
-        );
-        layout.setVerticalGroup(
-            layout.createParallelGroup(GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(layout.createParallelGroup(
-                    GroupLayout.Alignment.BASELINE)
-                    .addComponent(chooseDirectory)
-                    .addComponent(buttonInterpret)
-                    .addComponent(clarifyImage)
-                    .addComponent(labelLibrarySection, GroupLayout.DEFAULT_SIZE,
-                        GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(labelSearch, GroupLayout.DEFAULT_SIZE,
-                        GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(searchFiles))
-                .addPreferredGap(
-                    LayoutStyle.ComponentPlacement.RELATED, 8, Short.MAX_VALUE)
-                .addGroup(layout.createParallelGroup(
-                    GroupLayout.Alignment.LEADING, false)
-                    .addComponent(scrollFileList)
-                    .addComponent(tabbedContent)))
-        );
+                .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
+                        .addGroup(layout.createSequentialGroup().addComponent(chooseDirectory)
+                                .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED).addComponent(buttonInterpret)
+                                .addPreferredGap(LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addComponent(clarifyImage, GroupLayout.DEFAULT_SIZE, 110, Short.MAX_VALUE)
+                                .addGap(42, 42, 42).addComponent(labelSearch)
+                                .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(searchFiles, GroupLayout.PREFERRED_SIZE, 187, GroupLayout.PREFERRED_SIZE))
+                        .addComponent(tabbedContent, GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE))
+                .addContainerGap()));
+        layout.setVerticalGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING).addGroup(layout
+                .createSequentialGroup().addContainerGap()
+                .addGroup(layout.createParallelGroup(GroupLayout.Alignment.BASELINE).addComponent(chooseDirectory)
+                        .addComponent(buttonInterpret).addComponent(clarifyImage)
+                        .addComponent(labelLibrarySection, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE,
+                                Short.MAX_VALUE)
+                        .addComponent(labelSearch, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(searchFiles))
+                .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED, 8, Short.MAX_VALUE)
+                .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING, false).addComponent(scrollFileList)
+                        .addComponent(tabbedContent))));
 
         pack();
     }
 
     /**
-     * @param type
-     * Saves the currently loaded file names, source path, and content
+     * @param type Saves the currently loaded file names, source path, and content
      */
     public void saveLibrary(final String type) {
         try {
             String programPath = System.getProperty("user.dir") + "/libdata";
             programPath = programPath.replace("\\", "/");
-            //NAMES
+            // NAMES
             if (type == "names") {
-                FileOutputStream fosNames = new FileOutputStream(
-                    programPath + "/names.libdata");
-                ObjectOutputStream oosNames = new ObjectOutputStream(
-                    fosNames);
+                final FileOutputStream fosNames = new FileOutputStream(programPath + "/names.libdata");
+                final ObjectOutputStream oosNames = new ObjectOutputStream(fosNames);
                 oosNames.writeObject(foundFiles_NAME);
                 oosNames.close();
             }
-            //SOURCES
+            // SOURCES
             if (type == "sources") {
-                FileOutputStream fosSources = new FileOutputStream(
-                    programPath + "/source.libdata");
-                ObjectOutputStream oosSources = new ObjectOutputStream(
-                    fosSources);
+                final FileOutputStream fosSources = new FileOutputStream(programPath + "/source.libdata");
+                final ObjectOutputStream oosSources = new ObjectOutputStream(fosSources);
                 oosSources.writeObject(foundFiles_SOURCE);
                 oosSources.close();
             }
-            //CONTENT
+            // CONTENT
             if (type == "content") {
-                FileOutputStream fosContent = new FileOutputStream(
-                    programPath + "/content.libdata");
-                ObjectOutputStream oosContent = new ObjectOutputStream(
-                    fosContent);
+                final FileOutputStream fosContent = new FileOutputStream(programPath + "/content.libdata");
+                final ObjectOutputStream oosContent = new ObjectOutputStream(fosContent);
                 oosContent.writeObject(interpretedDocs);
                 oosContent.close();
             }
-        } catch (Exception ex) {
+        } catch (final Exception ex) {
             System.out.println(ex);
         }
     }
 
     /**
-     * @param evt
-     * Whether the program will take extra time to enhance images for
-     * better readability
+     * @param evt Whether the program will take extra time to enhance images for
+     *            better readability
      */
-    private void clarifyImageActionPerformed(
-        final java.awt.event.ActionEvent evt) {
+    private void clarifyImageActionPerformed(final java.awt.event.ActionEvent evt) {
     }
 
     /**
-     * @param args
-     * Runs the main program and sets UI style
+     * @param args Runs the main program and sets UI style
+     * @throws InstantiationException
      */
-    public static void main(final String[] args) {
-        //UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+    public static void main(final String[] args) throws InstantiationException {
+        // UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         try {
-            for (UIManager.LookAndFeelInfo info
-             : UIManager.getInstalledLookAndFeels()) {
+            for (final UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
                 if ("Nimbus".equals(info.getName())) {
                     UIManager.setLookAndFeel(info.getClassName());
                     break;
                 }
             }
-        } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(OCRApp.class.getName()).log(
-                    java.util.logging.Level.SEVERE, null, ex);
-        } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(OCRApp.class.getName()).log(
-                    java.util.logging.Level.SEVERE, null, ex);
-        } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(OCRApp.class.getName()).log(
-                    java.util.logging.Level.SEVERE, null, ex);
-        } catch (UnsupportedLookAndFeelException ex) {
+        } catch (final ClassNotFoundException ex) {
+            java.util.logging.Logger.getLogger(OCRApp.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(OCRApp.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (final IllegalAccessException ex) {
+            java.util.logging.Logger.getLogger(OCRApp.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (final UnsupportedLookAndFeelException ex) {
             java.util.logging.Logger.getLogger(OCRApp.class.getName()).log(
                     java.util.logging.Level.SEVERE, null, ex);
         }
