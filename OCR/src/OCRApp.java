@@ -1,4 +1,6 @@
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
@@ -6,10 +8,13 @@ import java.util.ArrayList;
 import java.util.Dictionary;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.Scanner;
+import java.util.concurrent.ExecutionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseAdapter;
@@ -17,6 +22,10 @@ import java.awt.event.MouseMotionListener;
 import java.awt.Point;
 import java.awt.Desktop;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.poi.openxml4j.opc.OPCPackage;
+import org.apache.poi.xwpf.extractor.XWPFWordExtractor;
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.apache.commons.*;
 
 import javax.swing.JFrame;
 import javax.swing.WindowConstants;
@@ -53,6 +62,7 @@ import com.hullabaloo.file.directorySearch;
 import com.hullabaloo.file.LoadLibrary;
 import com.hullabaloo.file.OpenFileLocation;
 
+import net.sourceforge.tess4j.TessAPI;
 import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.tess4j.TesseractException;
 
@@ -88,6 +98,7 @@ public class OCRApp extends JFrame {
         langaugeModels = new JMenuItem("Choose Language Models");
         exitProgram = new JMenuItem("Exit");
         minimizeProgram = new JMenuItem("Minimize");
+        runItem = new JMenuItem("Analyze Document");
         scrollFileList = new JScrollPane();
         calcJobsList = new JList<String>(calcJobs);
         fileArchiveList = new JList<String>(fileArchive);
@@ -175,19 +186,21 @@ public class OCRApp extends JFrame {
                 String results = "";
                 for (String item_name : foundFiles_NAME){
                     String text = interpretedDocs.get(item_name);
-                    Matcher matcher = pattern.matcher(text);
-                    while (matcher.find()) {
-                        int startIndex = 0;
-                        int endIndex = 0;
-                        if (matcher.start() > 200){
-                            startIndex = matcher.start()-200;
+                    if (text != null) {
+                        Matcher matcher = pattern.matcher(text);
+                        while (matcher.find()) {
+                            int startIndex = 0;
+                            int endIndex = 0;
+                            if (matcher.start() > 200){
+                                startIndex = matcher.start()-200;
+                            }
+                            if (text.length() > (matcher.end() + 200)){
+                                endIndex = matcher.end() + 200;
+                            } else {
+                                endIndex = text.length();
+                            }
+                            results = results + "<h3>FOUND: " + matcher.group(1) + " in " + item_name + "</h3></br>-----------</br></br>" + text.substring(startIndex, matcher.start()) + "<b style='color:blue;'>" + text.substring(matcher.start(), matcher.end()) + "</b>" + text.substring(matcher.end(), endIndex) +  "</b></br>";
                         }
-                        if (text.length() > (matcher.end() + 200)){
-                            endIndex = matcher.end() + 200;
-                        } else {
-                            endIndex = text.length();
-                        }
-                        results = results + "<h3>FOUND: " + matcher.group(1) + " in " + item_name + "</h3></br>-----------</br></br>" + text.substring(startIndex, matcher.start()) + "<b style='color:blue;'>" + text.substring(matcher.start(), matcher.end()) + "</b>" + text.substring(matcher.end(), endIndex) +  "</b></br>";
                     }
                 }
                 searchResultsList.setText(results);
@@ -230,6 +243,9 @@ public class OCRApp extends JFrame {
         });
 
         final Tesseract tesseract = new Tesseract();
+        String programPath = System.getProperty("user.dir") + "/tessdata";
+        programPath = programPath.replace("\\", "/");
+        tesseract.setDatapath(programPath);
 
         chooseDirectory.setText("Load Library");
         chooseDirectory.addActionListener((final ActionEvent e) -> {
@@ -242,45 +258,66 @@ public class OCRApp extends JFrame {
                 foundFiles_SOURCE.add(ds.getAllFilesSource().get(fileIndex));
                 foundFiles_NAME.add(ds.getAllFileNames().get(fileIndex));
             }
-            buttonInterpret.setEnabled(true);
+            //buttonInterpret.setEnabled(true);
             saveLibrary("names");
             saveLibrary("sources");
         });
 
         buttonInterpret.setText("Analyze Documents");
-        buttonInterpret.setEnabled(false);
+        buttonInterpret.setEnabled(true);
         buttonInterpret.addActionListener((final ActionEvent e) -> {
             tabbedContent.setSelectedIndex(1); // set to job content panel
-            buttonInterpret.setEnabled(false);
-            String programPath = System.getProperty("user.dir") + "/tessdata";
-            programPath = programPath.replace("\\", "/");
-
-            tesseract.setDatapath(programPath);
-            final SwingWorker<String, Void> worker = new SwingWorker<String, Void>() {
+            //buttonInterpret.setEnabled(false);
+            
+            final SwingWorker<Boolean, Void> worker = new SwingWorker<Boolean, Void>() {
                 @Override
-                public String doInBackground() {
+                protected Boolean doInBackground() throws FileNotFoundException{
                     jobProgress.setMaximum(foundFiles_SOURCE.size());
-                    for (int fileIndex = 0; fileIndex < foundFiles_SOURCE.size(); fileIndex++) {
-                        calcJobs.addElement("Queued: " + foundFiles_NAME.get(fileIndex));
-                        calcJobs.set(fileIndex, "Running: " + foundFiles_NAME.get(fileIndex));
-                        String text = "";
-                        try {
-                            text = tesseract.doOCR(new File(foundFiles_SOURCE.get(fileIndex)));
-                        } catch (final TesseractException e) {
-                            e.printStackTrace();
-                        } catch (final Exception ee) {
-                            ee.printStackTrace();
+                    try{
+                        for (int fileIndex = 0; fileIndex < foundFiles_SOURCE.size(); fileIndex++) {
+                            calcJobs.addElement("Queued: " + foundFiles_NAME.get(fileIndex));
+                            calcJobs.set(fileIndex, "Running: " + foundFiles_NAME.get(fileIndex));
+                            if (interpretedDocs.get(foundFiles_NAME.get(fileIndex)) == null){  
+                                String text = "";
+                                String fe = foundFiles_SOURCE.get(fileIndex).substring(foundFiles_SOURCE.get(fileIndex).lastIndexOf(".") + 1);
+                                if (fe.contains("txt")){
+                                    File file_loc = new File(foundFiles_SOURCE.get(fileIndex));
+                                    Scanner sc = new Scanner(file_loc);
+                                    text = sc.useDelimiter("\\A").next();
+                                    sc.close();
+                                } else if (fe.contains("doc") || fe.contains("docx")){
+                                        FileInputStream fis = new FileInputStream(foundFiles_SOURCE.get(fileIndex));
+                                        XWPFDocument xdoc = new XWPFDocument(OPCPackage.open(fis));
+                                        XWPFWordExtractor extractor = new XWPFWordExtractor(xdoc);
+                                        text = extractor.getText();
+                                        extractor.close();
+                                } else {
+                                        text = tesseract.doOCR(new File(foundFiles_SOURCE.get(fileIndex)));
+                                }
+                                interpretedDocs.put(foundFiles_NAME.get(fileIndex), text);
+                                calcJobs.set(fileIndex, "Completed: " + foundFiles_NAME.get(fileIndex));
+                                jobProgress.setValue(fileIndex + 1);
+                            } else {
+                                calcJobs.set(fileIndex, "Already Ran: " + foundFiles_NAME.get(fileIndex));
+                                jobProgress.setValue(fileIndex + 1);
+                            }
                         }
-                        interpretedDocs.put(foundFiles_NAME.get(fileIndex), text);
-                        calcJobs.set(fileIndex, "Completed: " + foundFiles_NAME.get(fileIndex));
-                        jobProgress.setValue(fileIndex + 1);
+                    } catch (final TesseractException e) {
+                        e.printStackTrace();
+                    } catch (final Exception ee) {
+                        ee.printStackTrace();
                     }
-                    return "";
+                    return true;
                 }
 
                 @Override
-                public void done() {
-                    System.out.println("DONE");
+                protected void done() {
+                    try {
+						Boolean test = get();
+					} catch (InterruptedException | ExecutionException e) {
+						e.printStackTrace();
+					}
+                    System.out.println("FINISHED");
                     saveLibrary("content");
                     searchFiles.setEditable(true);
                 }
@@ -288,7 +325,58 @@ public class OCRApp extends JFrame {
             worker.execute();
             hasInterpretedDocs = true;
         });
-
+        runItem.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                final SwingWorker<Boolean, Void> worker = new SwingWorker<Boolean, Void>() {
+                    @Override
+                    protected Boolean doInBackground() throws FileNotFoundException{
+                        final String selection = fileArchiveList.getSelectedValue().toString();
+                        try{
+                            int jobIndex = calcJobs.getSize();
+                            calcJobs.addElement("Queued: " + selection);
+                            calcJobs.set(jobIndex, "Running: " + selection);
+                            String text = "";
+                            String fe = foundFiles_SOURCE.get(foundFiles_NAME.indexOf(selection)).substring(foundFiles_SOURCE.get(foundFiles_NAME.indexOf(selection)).lastIndexOf(".") + 1);
+                            if (fe.contains("txt")){
+                                File file_loc = new File(foundFiles_SOURCE.get(foundFiles_NAME.indexOf(selection)));
+                                Scanner sc = new Scanner(file_loc);
+                                text = sc.useDelimiter("\\A").next();
+                                sc.close();
+                            } else if (fe.contains("doc") || fe.contains("docx")){
+                                    FileInputStream fis = new FileInputStream(foundFiles_SOURCE.get(foundFiles_NAME.indexOf(selection)));
+                                    XWPFDocument xdoc = new XWPFDocument(OPCPackage.open(fis));
+                                    XWPFWordExtractor extractor = new XWPFWordExtractor(xdoc);
+                                    text = extractor.getText();
+                                    extractor.close();
+                            } else {
+                                    text = tesseract.doOCR(new File(foundFiles_SOURCE.get(foundFiles_NAME.indexOf(selection))));
+                            }
+                            interpretedDocs.put(selection, text);
+                            calcJobs.set(jobIndex, "Completed: " + selection);
+                        } catch (final TesseractException e) {
+                            e.printStackTrace();
+                        } catch (final Exception ee) {
+                            ee.printStackTrace();
+                        }
+                        return true;
+                    }
+    
+                    @Override
+                    protected void done() {
+                        try {
+                            Boolean test = get();
+                        } catch (InterruptedException | ExecutionException e) {
+                            e.printStackTrace();
+                        }
+                        System.out.println("FINISHED");
+                        saveLibrary("content");
+                        searchFiles.setEditable(true);
+                    }
+                };
+                worker.execute();
+                hasInterpretedDocs = true;
+            }
+        });
         fileArchiveList.addListSelectionListener(new ListSelectionListener() {
             @Override
             public void valueChanged(final ListSelectionEvent arg0) {
@@ -304,20 +392,26 @@ public class OCRApp extends JFrame {
             final ArrayList<String> loadName = new LoadLibrary().loadMe("names.libdata");
             final ArrayList<String> loadSource = new LoadLibrary().loadMe("source.libdata");
             final Dictionary<String, String> loadContent = new LoadLibrary().loadContent("content.libdata");
-
             for (int i = 0; i < loadName.size(); i++) {
                 fileArchive.addElement(loadName.get(i));
                 foundFiles_NAME.add(i, loadName.get(i));
                 foundFiles_SOURCE.add(i, loadSource.get(i));
             }
-            for (int i = 0; i < loadContent.size(); i++) {
-                interpretedDocs.put(loadName.get(i), loadContent.get(loadName.get(i)));
+            for (int i = 0; i < loadName.size(); i++) {
+                try{
+                    System.out.println(i);
+                    interpretedDocs.put(loadName.get(i), loadContent.get(loadName.get(i)));
+                } catch (NullPointerException npe) {
+                    System.out.println("Null pointer on " + loadName.get(i));
+                    interpretedDocs.put(loadName.get(i), "");
+                    continue;
+                }
             }
             if (loadContent.size() > 0){
                 hasInterpretedDocs = true;
             }
             searchFiles.setEditable(true);
-            buttonInterpret.setEnabled(true);
+            //buttonInterpret.setEnabled(true);
         });
 
         clarifyImage.setText("Clarify Images");
@@ -352,6 +446,7 @@ public class OCRApp extends JFrame {
                         }
                     }
                     popup.add(openFileLocation);
+                    popup.add(runItem);
                     popup.show(e.getComponent(), e.getX(), e.getY());
                 }
             }
@@ -466,6 +561,7 @@ public class OCRApp extends JFrame {
     private JMenuItem langaugeModels;
     private JMenuItem exitProgram;
     private JMenuItem minimizeProgram;
+    private JMenuItem runItem;
     private JButton chooseDirectory;
     private JCheckBox clarifyImage;
     private JLabel labelLibrarySection;

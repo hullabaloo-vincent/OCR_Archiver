@@ -36,8 +36,10 @@ public class directorySearch {
                 public FileVisitResult visitFile(final Path file,
                 final BasicFileAttributes attrs)
                             throws FileNotFoundException {
-                    String readF = new Scanner(
-                        new File("filter.fl")).useDelimiter("\\A").next();
+                    File file_loc = new File("filter.fl");
+                    Scanner sc = new Scanner(file_loc);
+                    String readF = sc.useDelimiter("\\A").next();
+                    sc.close();
                     String splitHere = "[,]";
                     int l = 0;
 //Split up contents of filter.fl every ',' into a string array
