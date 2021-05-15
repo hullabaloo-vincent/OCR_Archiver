@@ -285,6 +285,9 @@ public class OCRApp extends JFrame {
             for (int i = 0; i < loadContent.size(); i++) {
                 interpretedDocs.put(loadName.get(i), loadContent.get(loadName.get(i)));
             }
+            if (loadContent.size() > 0){
+                hasInterpretedDocs = true;
+            }
             searchFiles.setEditable(true);
             buttonInterpret.setEnabled(true);
         });
