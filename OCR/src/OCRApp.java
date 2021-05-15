@@ -5,6 +5,9 @@ import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Dictionary;
 import java.util.Hashtable;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.MouseEvent;
@@ -13,6 +16,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseMotionListener;
 import java.awt.Point;
 import java.awt.Desktop;
+import org.apache.commons.lang3.StringUtils;
 
 import javax.swing.JFrame;
 import javax.swing.WindowConstants;
@@ -23,6 +27,7 @@ import javax.swing.GroupLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JEditorPane;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.JLabel;
@@ -66,7 +71,6 @@ public class OCRApp extends JFrame {
     static boolean hasInterpretedDocs = false;
     static final DefaultListModel<String> calcJobs = new DefaultListModel<>();
     static final DefaultListModel<String> fileArchive = new DefaultListModel<>();
-    static final DefaultListModel<String> searchResults = new DefaultListModel<>();
     static Dictionary<String, String> interpretedDocs = new Hashtable<String, String>();
     static final ArrayList<String> foundFiles_SOURCE = new ArrayList<String>();
     static ArrayList<String> foundFiles_NAME = new ArrayList<String>();
@@ -87,13 +91,14 @@ public class OCRApp extends JFrame {
         scrollFileList = new JScrollPane();
         calcJobsList = new JList<String>(calcJobs);
         fileArchiveList = new JList<String>(fileArchive);
-        searchResultsList = new JList<String>(searchResults);
+        searchResultsList = new JEditorPane();
         tabbedContent = new JTabbedPane();
         jScrollPane2 = new JScrollPane();
         fileContents = new JTextArea();
         jobPanel = new JPanel();
         jobProgress = new JProgressBar();
         jScrollPane3 = new JScrollPane();
+        searchScrollPane = new JScrollPane(searchResultsList,JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         labelLibrarySection = new JLabel();
         searchFiles = new JTextField();
         labelSearch = new JLabel();
@@ -148,11 +153,10 @@ public class OCRApp extends JFrame {
         labelLibrarySection.setText("Library");
 
         searchFiles.setToolTipText("");
-
+        searchResultsList.setContentType("text/html");
         labelSearch.setFont(new java.awt.Font("Tahoma", 1, 10));
         labelSearch.setText("Search");
-
-        tabbedContent.addTab("Search Results", searchResultsList);
+        tabbedContent.addTab("Search Results", searchScrollPane);
 
         final Action action = new AbstractAction() {
             /**
@@ -163,6 +167,30 @@ public class OCRApp extends JFrame {
             @Override
             public void actionPerformed(final ActionEvent e) {
                 System.out.println("some action");
+                List<String> tokens = new ArrayList<String>();
+                tokens.add(searchFiles.getText());
+                System.out.println(tokens);
+                String patternString = "\\b(" + StringUtils.join(tokens, "|") + ")\\b";
+                Pattern pattern = Pattern.compile(patternString);
+                String results = "";
+                for (String item_name : foundFiles_NAME){
+                    String text = interpretedDocs.get(item_name);
+                    Matcher matcher = pattern.matcher(text);
+                    while (matcher.find()) {
+                        int startIndex = 0;
+                        int endIndex = 0;
+                        if (matcher.start() > 200){
+                            startIndex = matcher.start()-200;
+                        }
+                        if (text.length() > (matcher.end() + 200)){
+                            endIndex = matcher.end() + 200;
+                        } else {
+                            endIndex = text.length();
+                        }
+                        results = results + "<h3>FOUND: " + matcher.group(1) + " in " + item_name + "</h3></br>-----------</br></br>" + text.substring(startIndex, matcher.start()) + "<b style='color:blue;'>" + text.substring(matcher.start(), matcher.end()) + "</b>" + text.substring(matcher.end(), endIndex) +  "</b></br>";
+                    }
+                }
+                searchResultsList.setText(results);
             }
         };
         searchFiles.addActionListener(action);
@@ -266,7 +294,7 @@ public class OCRApp extends JFrame {
             public void valueChanged(final ListSelectionEvent arg0) {
                 if (!arg0.getValueIsAdjusting()) {
                     if (hasInterpretedDocs) {
-                        fileContents.setText(interpretedDocs.get(fileArchiveList.getSelectedValue().toString()));
+                        fileContents.setText(interpretedDocs.get(fileArchiveList.getSelectedValue().toString()));  
                     }
                 }
             }
@@ -444,12 +472,13 @@ public class OCRApp extends JFrame {
     private JLabel labelSearch;
     private JList<String> calcJobsList;
     private JList<String> fileArchiveList;
-    private JList<String> searchResultsList;
+    private JEditorPane searchResultsList;
     private JPanel jobPanel;
     private JProgressBar jobProgress;
     private JScrollPane scrollFileList;
     private JScrollPane jScrollPane2;
     private JScrollPane jScrollPane3;
+    private JScrollPane searchScrollPane;
     private JTabbedPane tabbedContent;
     private JTextArea fileContents;
     private JTextField searchFiles;
